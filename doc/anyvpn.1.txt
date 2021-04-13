@@ -150,7 +150,7 @@ ENVIRONMENT
 			  If unset, then anyvpn will use "${USER}".
 
 SEE ALSO
-     lpass(1)
+     lpass(1), op(1)
 
 HISTORY
      This script was originally written by Jan Schaumann
