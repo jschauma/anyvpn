@@ -1,3 +1,13 @@
+Version 0.7 (2021-04-13)
+ * add support for 1Password
+
+Version 0.6 (2021-04-08)
+ * account for multiple identical lpass entries
+ * detect when we're already connected / disconnected
+
+Version 0.5 (2021-04-08)
+ * actually honor VPN_USER
+
 Version 0.4 (2021-02-17)
  * first public version
 

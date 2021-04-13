@@ -7,11 +7,14 @@
 set -eu
 
 PROGNAME="${0##*/}"
-VERSION="0.4"
+VERSION="0.7"
 VERBOSITY=0
 
 # These will be determined below in setVariables()
+_DOMAIN=""
+
 _LP_LOGIN=""
+_OP_LOGIN=""
 _SITES=""
 _VPN_SITE=""
 _VPN_USER=""
@@ -22,21 +25,60 @@ _2FA="push"
 _ANYCONNECT_PREFIX="${ANYCONNECT_PREFIX:-"/opt/cisco/anyconnect"}"
 _ANYCONNECT="${_ANYCONNECT_PREFIX}/bin/vpn"
 _LPASS="$(which lpass || true)"
-_LP_VPN="${LASTPASS_VPN_ENTRY:-"VPN"}"
+_OPASS="$(which op || true)"
+_OPASS_SIGNIN_ADDRESS="${ONEPASS_ADDRESS:-"my.1password.com"}"
+_PASSWORD_MANAGER="lastpass"
 _VPN_PW=""
+
+_PM_VPN="${PM_VPN_ENTRY:-"VPN"}"
+_LP_VPN="${LASTPASS_VPN_ENTRY:-"${_PM_VPN}"}"
+_OP_VPN="${ONEPASS_VPN_ENTRY:-"${_PM_VPN}"}"
 
 ###
 ### Functions
 ###
 
+checkAnyconnectState() {
+	local state="$1"
+
+	if [ x"${state}" != x"connected" ] && [ x"${state}" != x"disconnected" ]; then
+		echo "Invalid state: ${state}" >&2
+		exit ${_FAIL}
+	fi
+
+	if ${_ANYCONNECT} state 2>&1 | grep -q -i "state: ${state}" >/dev/null 2>&1; then
+		echo "Already ${state}." >&2
+		exit ${_FAIL}
+		# NOTREACHED
+	fi
+}
+
 checkEnv() {
 	local l found
 
-	if [ -z "${_LPASS}" ]; then
-		echo "Unable to find 'lpass(1)' in your PATH." >&2
-		echo "Please install the lastpass-cli via e.g., 'brew install lastpass-cli' or from" >&2
-		echo "https://github.com/lastpass/lastpass-cli"
-		exit ${_FAIL}
+	case "${_PASSWORD_MANAGER}" in
+		lpass)
+			_PASSWORD_MANAGER="lastpass"
+		;;
+		opass|1pass|1password)
+			_PASSWORD_MANAGER="onepass"
+		;;
+	esac
+
+	if [ x"${_PASSWORD_MANAGER}" = x"lastpass" ]; then
+		if [ -z "${_LPASS}" ]; then
+			echo "Unable to find 'lpass(1)' in your PATH." >&2
+			echo "Please install the lastpass-cli via e.g., 'brew install lastpass-cli' or from" >&2
+			echo "https://github.com/lastpass/lastpass-cli"
+			exit ${_FAIL}
+		fi
+	elif [ x"${_PASSWORD_MANAGER}" = x"onepass" ]; then
+		if [ -z "${_OPASS}" ]; then
+			echo "Unable to find the 'op(1)' in your PATH." >&2
+			echo "Please install the 1Password command-line client from" >&2
+			echo "https://support.1password.com/command-line-getting-started/" >&2
+			exit ${_FAIL}
+		fi
 	fi
 
 	if [ ! -x "${_ANYCONNECT}" ]; then
@@ -93,6 +135,65 @@ getPasswordFromLastPass() {
 	fi
 	
 	_VPN_PW="$(${_LPASS} show "${_LP_VPN}" --password)"
+	if [ -z "${_VPN_PW}" ]; then
+		echo "Got an empty password from LastPass??" >&2
+		exit ${_FAIL}
+		# NOTREACHED
+	fi
+
+	if expr "${_VPN_PW}" : "Multiple matches found." >/dev/null 2>&1; then
+		echo "${_VPN_PW}" >&2
+		echo >&2
+		echo "If both are identical, you could delete one or the other." >&2
+		echo "If they are different, you could rename one or the other." >&2
+		echo "If you want to keep both as they are, then please set" >&2
+		echo "the LASTPASS_VPN_ENTRY environment variable to the correct ID." >&2
+		exit ${_FAIL}
+		# NOTREACHED
+	fi
+}
+
+getPasswordFromOnePass() {
+	verbose "Trying to get your VPN password from 1Password..." 2
+
+	local token="${ONEPASS_SESSION:-""}"
+	local args="${_OPASS_SIGNIN_ADDRESS}"
+	local signin=0
+
+	if [ -z "${token}" ]; then
+		verbose "Signing into 1Password..." 3
+		# Provide the complete signin address only the
+		# first time op signs in.  This will require
+		# the user to provide the "Secret Key".
+		if [ ! -f ~/.op/config ]; then
+			args="${args} ${_OP_LOGIN}"
+		fi
+		token="$(${_OPASS} signin --raw "${args}")"
+		signin=1
+	fi
+
+	_VPN_PW="$(${_OPASS} --session "${token}" get item "${_OP_VPN}" --fields password)"
+	if [ -z "${_VPN_PW}" ]; then
+		echo "Got an empty password from 1Password??" >&2
+		exit ${_FAIL}
+		# NOTREACHED
+	fi
+
+	if [ ${signin} -eq 1 ]; then
+		verbose "Signing out of 1Password..." 3
+		${_OPASS} --session "${token}" signout
+	fi
+}
+
+getPasswordFromPasswordManager() {
+	case "${_PASSWORD_MANAGER}" in
+		lastpass)
+			getPasswordFromLastPass
+		;;
+		onepass)
+			getPasswordFromOnePass
+		;;
+	esac
 }
 
 listSites() {
@@ -105,7 +206,9 @@ setVariables() {
 	local domain
 	local user
 
-	if [ -n "${DOMAIN:-""}" ]; then
+	if [ -n "${_DOMAIN:-""}" ]; then
+		domain="${_DOMAIN}"
+	elif [ -n "${DOMAIN:-""}" ]; then
 		domain="${DOMAIN}"
 	elif [ -f "/etc/resolv.conf" ]; then
 		domain="$(sed -n -E 's/^(search|domain) ([^ ]+).*/\2/p' /etc/resolv.conf)"
@@ -121,8 +224,10 @@ setVariables() {
 	fi
 
 	_LP_LOGIN="${LASTPASS_LOGIN:-"${user}@${domain}"}"
+	_OP_LOGIN="${ONEPASS_LOGIN:-"${user}@${domain}"}"
+
 	_LP_VPN="${LASTPASS_VPN_ENTRY:-"VPN"}"
-	_VPN_USER="${VPN_USERNAME:-"${user}"}"
+	_VPN_USER="${VPN_USER:-"${user}"}"
 
 	_SITES="$(sed -n -e 's/.*<HostName>\(.*\)<\/HostName>.*/\1/p' ${_ANYCONNECT_PREFIX}/profile/*.xml)"
 
@@ -135,10 +240,11 @@ setVariables() {
 
 usage() {
 	cat <<EOH
-Usage: ${PROGNAME} [-hv] [-m method] on|off|sites
+Usage: ${PROGNAME} [-hv] [-m method] [-p app] on|off|sites
 	-V         print version number and exit
 	-h         print this help and exit
 	-m method  use this 2FA method (default: push)
+	-p app     use this password manager (lastpass, onepass; default: lastpass)
 	-s site    connect to this site (default: ${_VPN_SITE})
 	-v         be verbose
 EOH
@@ -160,12 +266,16 @@ verbose() {
 
 vpnOff() {
 	verbose "Disconnecting from VPN..."
+
+	checkAnyconnectState "disconnected"
 	${_ANYCONNECT} disconnect
 }
 
 vpnOn() {
 	verbose "Connecting to VPN..."
-	getPasswordFromLastPass
+
+	checkAnyconnectState "connected"
+	getPasswordFromPasswordManager
 	connectToVPN
 }
 
@@ -175,7 +285,7 @@ vpnOn() {
 
 setVariables
 
-while getopts 'Vhlm:s:v' opt; do
+while getopts 'Vhlm:p:s:v' opt; do
 	case ${opt} in
 		V)
 			echo "${PROGNAME} Version ${VERSION}"
@@ -189,6 +299,9 @@ while getopts 'Vhlm:s:v' opt; do
 		;;
 		m)
 			_2FA="${OPTARG}"
+		;;
+		p)
+			_PASSWORD_MANAGER="${OPTARG}"
 		;;
 		s)
 			_VPN_SITE="${OPTARG}"

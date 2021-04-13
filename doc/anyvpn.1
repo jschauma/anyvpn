@@ -1,4 +1,4 @@
-.Dd February 12, 2021
+.Dd April 13, 2021
 .Dt anyvpn 1
 .Os
 .Sh NAME
@@ -8,6 +8,7 @@
 .Nm
 .Op Fl Vhv
 .Op Fl m Ar method
+.Op Fl p Ar app
 .Op Fl s Ar site
 .Ar on|off|sites
 .Sh DESCRIPTION
@@ -28,11 +29,17 @@ Display help and exit.
 Use this 2FA method.
 Valid options are 'push' or a Duo 2FA code.
 Defaults to 'push'.
+.It Fl p Ar app
+Use this password manager app.
+Currently supported: lastpass, onepass.
+If not specified,
+.Nm
+will use 'lastpass'.
 .It Fl s Ar site
 Connect to this site.
 Defaults to the value of the VPN_SITE environment
 variable or, if that is unset, the first site
-configured in AnyConnect.
+condigured in AnyConnect.
 .It Fl v
 Be verbose.
 Can be specified multiple times.
@@ -63,6 +70,40 @@ Otherwise,
 .Nm
 will return with the exit value of the AnyConnect
 \'vpn' command.
+.Sh EXAMPLES
+The following examples illustrate common usage of the
+.Nm
+utility.
+.Pp
+To connect to the VPN using the password stored under
+the "Yahoo" login entry in your LastPass password
+manager for the "jschauma@yahoo.com" account:
+.Bd -literal -offset indent
+export LASTPASS_LOGIN="jschauma@yahoo.com"
+export PM_VPN_ENTRY="Yahoo"
+anyvpn on
+.Ed
+.Pp
+To connect to the VPN using the password stored under
+the "Yahoo" login entry in your 1Password password
+manager for the "jschauma@yahoo.com" account in your
+company's team vault "mycorp.1password.com":
+.Bd -literal -offset indent
+export USER="jschauma"
+export DOMAIN="yahoo.com"
+export PM_VPN_ENTRY="Yahoo"
+export ONEPASS_ADDRESS="mycorp.1password.com"
+anyvpn -p onepass on
+.Ed
+.Pp
+To connect to the "NYC" VPN site using an existing
+1Password session from your personal 1Password
+account:
+.Bd -literal -offset indent
+export ONEPASS_SESSION="$(op signin --raw)"
+export PM_VPN_ENTRY="Yahoo"
+anyvpn -s NYC -p onepass on
+.Ed
 .Sh ENVIRONMENT
 The following environment variables affect the execution of this tool:
 .Bl -tag -width LASTPASS_VPN_ENTRY_
@@ -70,10 +111,9 @@ The following environment variables affect the execution of this tool:
 The path to where AnyConnect is installed.
 Defaults to "/opt/cisco/anyconnect".
 .It Ev DOMAIN
-If LASTPASS_LOGIN is unset, then
-.Nm
-will attempt to construct a reasonable login address
-for LastPass, using this domain.
+The domain to use when constructing your
+LASTPASS_LOGIN or ONEPASS_LOGIN ID.
+.Pp
 If unset,
 .Nm
 will try to identify a suitable domain by looking at
@@ -92,6 +132,48 @@ will use
 .It Ev LASTPASS_VPN_ENTRY
 The name of the LastPass entry for your VPN login.
 .Pp
+If unset, then
+.Nm
+will use the value of the PM_VPN_ENTRY environment
+variable.
+.It Ev ONEPASS_ADDRESS
+The 1Password "sign in address".
+If not specified, defaults to "my.1password.com".
+See https://is.gd/BR670l for details.
+.It Ev ONEPASS_LOGIN
+The 1Password user ID.
+This may be e.g., "first.lass@company.tld",
+"${USER}@company.name} etc.
+.Pp
+If unset, then
+.Nm
+will use
+"${USER}@${DOMAIN}".
+.It Ev ONEPASS_SESSION
+The 1Password
+.Xr op 1
+session token to use.
+Setting this in your environment allows you to sign in
+to your 1Password account in your shell, and
+.Nm
+to retrieve the password without requiring your master
+password to be entered.
+.Pp
+If unset, then
+.Nm
+will sign in to your 1Password account, prompting you
+for your master password, retrieve the VPN password,
+and then invalidate the session.
+.It Ev ONEPASS_VPN_ENTRY
+The name of the 1Password entry for your VPN login.
+.Pp
+If unset, then
+.Nm
+will use the value of the PM_VPN_ENTRY environment
+variable.
+.It Ev PM_VPN_ENTRY
+The name of the password manager entry for your VPN
+login.
 If unset, then
 .Nm
 will use "VPN".
