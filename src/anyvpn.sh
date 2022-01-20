@@ -261,10 +261,10 @@ setVariables() {
 
 usage() {
 	cat <<EOH
-Usage: ${PROGNAME} [-Vfhv] [-m method] [-p app] [-s site] on|off|sites
+Usage: ${PROGNAME} [-Vhlv] [-m method] [-p app] [-s site] on|off|sites
 	-V         print version number and exit
-        -f         force password manager logout
 	-h         print this help and exit
+	-l         log out of the password manager after fetching the password
 	-m method  use this 2FA method (default: push)
 	-p app     use this password manager (lastpass, onepass; default: lastpass)
 	-s site    connect to this site (default: ${_VPN_SITE})
@@ -307,20 +307,20 @@ vpnOn() {
 
 setVariables
 
-while getopts 'Vfhlm:p:s:v' opt; do
+while getopts 'Vhlm:p:s:v' opt; do
 	case ${opt} in
 		V)
 			echo "${PROGNAME} Version ${VERSION}"
 			exit 0
 			# NOTREACHED
 		;;
-		f)
-			_FORCE_LOGOUT=1
-		;;
 		h\?)
 			usage
 			exit 0
 			# NOTREACHED
+		;;
+		l)
+			_FORCE_LOGOUT=1
 		;;
 		m)
 			_2FA="${OPTARG}"

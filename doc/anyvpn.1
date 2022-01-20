@@ -6,7 +6,7 @@
 .Nd connect to a Cisco AnyConnect VPN
 .Sh SYNOPSIS
 .Nm
-.Op Fl Vfhv
+.Op Fl Vhlv
 .Op Fl m Ar method
 .Op Fl p Ar app
 .Op Fl s Ar site
@@ -23,8 +23,9 @@ The following options are supported by
 .Bl -tag -width m_method_
 .It Fl V
 Print the current version information and exit.
-.It Fl f
-Force password manager logout.
+.It Fl l
+Log out of the password manager after fetching the
+password.
 .It Fl h
 Display help and exit.
 .It Fl m Ar method

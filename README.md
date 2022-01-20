@@ -38,7 +38,7 @@ NAME
      anyvpn -- connect to a Cisco AnyConnect VPN
 
 SYNOPSIS
-     anyvpn [-Vfhv] [-m method] [-p app] [-s site] on|off|sites
+     anyvpn [-Vhlv] [-m method] [-p app] [-s site] on|off|sites
 
 DESCRIPTION
      anyvpn is a simple script that allows you to connect to a Cisco AnyCon-
@@ -50,7 +50,7 @@ OPTIONS
 
      -V		Print the current version information and exit.
 
-     -f		Force password manager logout.
+     -l		Log out of the password manager after fetching the password.
 
      -h		Display help and exit.
 
