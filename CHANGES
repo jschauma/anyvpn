@@ -1,3 +1,13 @@
+Version 1.0 (2022-01-20)
+ * actually make '-f' do what we think was intended
+
+Version 0.9 (2021-06-17)
+ * add '-s' to usage output
+ * add '-f' to force password manager logout
+
+Version 0.8 (2021-05-26)
+ * rename to "anyvpn"
+
 Version 0.7 (2021-04-13)
  * add support for 1Password
 

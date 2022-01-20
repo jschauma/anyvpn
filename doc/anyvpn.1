@@ -1,4 +1,4 @@
-.Dd April 13, 2021
+.Dd January 20, 2022
 .Dt anyvpn 1
 .Os
 .Sh NAME
@@ -6,7 +6,7 @@
 .Nd connect to a Cisco AnyConnect VPN
 .Sh SYNOPSIS
 .Nm
-.Op Fl Vhv
+.Op Fl Vfhv
 .Op Fl m Ar method
 .Op Fl p Ar app
 .Op Fl s Ar site
@@ -23,6 +23,8 @@ The following options are supported by
 .Bl -tag -width m_method_
 .It Fl V
 Print the current version information and exit.
+.It Fl f
+Force password manager logout.
 .It Fl h
 Display help and exit.
 .It Fl m Ar method
@@ -60,6 +62,59 @@ choosing to use an easy to remember VPN password.
 provides the necessary glue to make it easier to
 connect to the VPN without having to unlock your
 password manager and copy and paste your password.
+.Sh PASSWORD MANAGER CONSIDERATIONS
+In order to retrieve your password from your password
+manager,
+.Nm
+needs to begin a session with the password manager or
+reuse an existing one.
+.Pp
+The behavior with respect to new sessions is as
+outlined below:
+.Bl -bullet
+.It
+If an existing session is found
+("lpass status -q" for
+.Xr lpass 1 ;
+a valid session token in the
+.Ev ONEPASS_SESSION
+environment variable for
+.Xr op 1 Ns ),
+.Nm
+will reuse that session.
+.It
+If no existing session is found,
+.Nm
+will initiate a new session.
+.El
+.Pp
+Since a new session for
+.Xr op 1
+is exposed only via an in-memory token, termination of
+.Nm
+effectively makes that session unavailable for any
+other processes, even if it still remains technically
+active, which is why
+.Nm
+explicitly invalidates it if it originally started it.
+.Pp
+On the other hand, a
+.Xr lpass 1
+session initiated by
+.Nm
+will remain active after the script terminates.
+Such a valid password manager session may then allow other
+processes to access secrets from that password
+manager.
+This is by design and can in fact be useful when using
+other tools that may require a password to be pulled
+from the password manager.
+.Pp
+To ensure
+.Nm
+invalidates the newly started session, pass the
+.Fl f
+flag.
 .Sh EXIT STATUS
 The
 .Nm
@@ -136,6 +191,15 @@ If unset, then
 .Nm
 will use the value of the PM_VPN_ENTRY environment
 variable.
+.It Ev LPASS_AGENT_TIMEOUT
+Not directly used by
+.Nm ,
+but used by
+.Xr lpass 1 ,
+this variable defines in seconds the validity of your
+LastPass session.
+Set this to e.g., 28800 for an 8 hour LastPass cache
+validity.
 .It Ev ONEPASS_ADDRESS
 The 1Password "sign in address".
 If not specified, defaults to "my.1password.com".
@@ -214,5 +278,5 @@ This script was originally written by
 .Aq jschauma@netmeister.org
 in June 2020.
 .Sh BUGS
-Please report issues to the author via pull requests
-or email.
+Please file bugs and feature requests via GitHub pull
+requests and issues or by emailing the author.

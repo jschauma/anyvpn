@@ -38,7 +38,7 @@ NAME
      anyvpn -- connect to a Cisco AnyConnect VPN
 
 SYNOPSIS
-     anyvpn [-Vhv] [-m method] [-p app] [-s site] on|off|sites
+     anyvpn [-Vfhv] [-m method] [-p app] [-s site] on|off|sites
 
 DESCRIPTION
      anyvpn is a simple script that allows you to connect to a Cisco AnyCon-
@@ -49,6 +49,8 @@ OPTIONS
      The following options are supported by anyvpn:
 
      -V		Print the current version information and exit.
+
+     -f		Force password manager logout.
 
      -h		Display help and exit.
 
@@ -76,6 +78,32 @@ DETAILS
      anyvpn provides the necessary glue to make it easier to connect to the
      VPN without having to unlock your password manager and copy and paste
      your password.
+
+PASSWORD MANAGER CONSIDERATIONS
+     In order to retrieve your password from your password manager, anyvpn
+     needs to begin a session with the password manager or reuse an existing
+     one.
+
+     The behavior with respect to new sessions is as outlined below:
+
+     o	 If an existing session is found ("lpass status -q" for lpass(1); a
+	 valid session token in the ONEPASS_SESSION environment variable for
+	 op(1)), anyvpn will reuse that session.
+
+     o	 If no existing session is found, anyvpn will initiate a new session.
+
+     Since a new session for op(1) is exposed only via an in-memory token,
+     termination of anyvpn effectively makes that session unavailable for any
+     other processes, even if it still remains technically active, which is
+     why anyvpn explicitly invalidates it if it originally started it.
+
+     On the other hand, a lpass(1) session initiated by anyvpn will remain
+     active after the script terminates.  Such a valid password manager ses-
+     sion may then allow other processes to access secrets from that password
+     manager.  This is by design and can in fact be useful when using other
+     tools that may require a password to be pulled from the password manager.
+
+     To ensure anyvpn invalidates the newly started session, pass the -f flag.
 
 EXIT STATUS
      The anyvpn utility will exit with a value of 255 if it encounters any
@@ -134,6 +162,11 @@ ENVIRONMENT
 			  If unset, then anyvpn will use the value of the
 			  PM_VPN_ENTRY environment variable.
 
+     LPASS_AGENT_TIMEOUT  Not directly used by anyvpn, but used by lpass(1),
+			  this variable defines in seconds the validity of
+			  your LastPass session.  Set this to e.g., 28800 for
+			  an 8 hour LastPass cache validity.
+
      ONEPASS_ADDRESS	  The 1Password "sign in address".  If not specified,
 			  defaults to "my.1password.com".  See
 			  https://is.gd/BR670l for details.
@@ -191,5 +224,6 @@ HISTORY
      <jschauma@netmeister.org> in June 2020.
 
 BUGS
-     Please report issues to the author via pull requests or email.
+     Please file bugs and feature requests via GitHub pull requests and issues
+     or by emailing the author.
 ```

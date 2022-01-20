@@ -1,13 +1,13 @@
 #! /bin/sh
 #
 # This script can be used to use Cisco Anyconnect to
-# connect to a VPN and have lpass(1) provide the
-# password.
+# connect to a VPN and have lpass(1) or op(1) provide
+# the password.
 
 set -eu
 
 PROGNAME="${0##*/}"
-VERSION="0.7"
+VERSION="1.0"
 VERBOSITY=0
 
 # These will be determined below in setVariables()
@@ -20,6 +20,7 @@ _VPN_SITE=""
 _VPN_USER=""
 
 _FAIL=255
+_FORCE_LOGOUT=0
 
 _2FA="push"
 _ANYCONNECT_PREFIX="${ANYCONNECT_PREFIX:-"/opt/cisco/anyconnect"}"
@@ -79,6 +80,10 @@ checkEnv() {
 			echo "https://support.1password.com/command-line-getting-started/" >&2
 			exit ${_FAIL}
 		fi
+	else
+		echo "Unsupported password manager." >&2
+		exit ${_FAIL}
+		# NOTREACHED
 	fi
 
 	if [ ! -x "${_ANYCONNECT}" ]; then
@@ -194,12 +199,29 @@ getPasswordFromPasswordManager() {
 			getPasswordFromOnePass
 		;;
 	esac
+
+	if [ ${_FORCE_LOGOUT} -gt 0 ]; then
+		logoutPass
+	fi
 }
 
 listSites() {
 	echo "The following values are supported for VPN_SITE:"
 	echo "${_SITES}"
 	exit 0
+}
+
+logoutPass() {
+	verbose "Logging out of ${_PASSWORD_MANAGER}..."
+
+	case "${_PASSWORD_MANAGER}" in
+		lastpass)
+			${_LPASS} logout -f
+		;;
+		# For 1Password, we explicitly log in, or require a login
+		# session to already exist.  If that already exists, we
+		# don't want to log the user out here, so noop.
+	esac
 }
 
 setVariables() {
@@ -226,7 +248,6 @@ setVariables() {
 	_LP_LOGIN="${LASTPASS_LOGIN:-"${user}@${domain}"}"
 	_OP_LOGIN="${ONEPASS_LOGIN:-"${user}@${domain}"}"
 
-	_LP_VPN="${LASTPASS_VPN_ENTRY:-"VPN"}"
 	_VPN_USER="${VPN_USER:-"${user}"}"
 
 	_SITES="$(sed -n -e 's/.*<HostName>\(.*\)<\/HostName>.*/\1/p' ${_ANYCONNECT_PREFIX}/profile/*.xml)"
@@ -240,8 +261,9 @@ setVariables() {
 
 usage() {
 	cat <<EOH
-Usage: ${PROGNAME} [-hv] [-m method] [-p app] on|off|sites
+Usage: ${PROGNAME} [-Vfhv] [-m method] [-p app] [-s site] on|off|sites
 	-V         print version number and exit
+        -f         force password manager logout
 	-h         print this help and exit
 	-m method  use this 2FA method (default: push)
 	-p app     use this password manager (lastpass, onepass; default: lastpass)
@@ -285,12 +307,15 @@ vpnOn() {
 
 setVariables
 
-while getopts 'Vhlm:p:s:v' opt; do
+while getopts 'Vfhlm:p:s:v' opt; do
 	case ${opt} in
 		V)
 			echo "${PROGNAME} Version ${VERSION}"
 			exit 0
 			# NOTREACHED
+		;;
+		f)
+			_FORCE_LOGOUT=1
 		;;
 		h\?)
 			usage
