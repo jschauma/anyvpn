@@ -5,12 +5,12 @@ manager whenever you connect to the VPN is a pain.
 This tool can help you make this less painful and
 hopefully encourage users to use a password manager.
 
-At this time, this script supports the use of
--LastPass and 1Password.  For use with LastPass, you
-need to install the `lpass` command-line utility
-(available from e.g.,
-[here](https://github.com/lastpass/lastpass-cli));
-for use with 1Password, you need to install the `op`
+At this time, this script supports the use of the
+macOS keychain, LastPass and 1Password.  For use with
+LastPass, you need to install the `lpass` command-line
+utility (available from e.g.,
+[here](https://github.com/lastpass/lastpass-cli)); for
+use with 1Password, you need to install the `op`
 command-line utility (available from e.g.,
 [here](https://support.1password.com/command-line-getting-started/)).
 
@@ -57,8 +57,9 @@ OPTIONS
      -m method	Use this 2FA method.  Valid options are 'push' or a Duo 2FA
 		code.  Defaults to 'push'.
 
-     -p app	Use this password manager app.	Currently supported: lastpass,
-		onepass.  If not specified, anyvpn will use 'lastpass'.
+     -p app	Use this password manager app.	Currently supported: keychain,
+		lastpass, onepass.  If not specified, anyvpn will use 'last-
+		pass'.
 
      -s site	Connect to this site.  Defaults to the value of the VPN_SITE
 		environment variable or, if that is unset, the first site
@@ -80,9 +81,9 @@ DETAILS
      your password.
 
 PASSWORD MANAGER CONSIDERATIONS
-     In order to retrieve your password from your password manager, anyvpn
-     needs to begin a session with the password manager or reuse an existing
-     one.
+     In order to retrieve your password from your password manager, and unless
+     you are using the macOS keychain (-p keychain), anyvpn needs to begin a
+     session with the password manager or reuse an existing one.
 
      The behavior with respect to new sessions is as outlined below:
 
@@ -112,6 +113,12 @@ EXIT STATUS
 
 EXAMPLES
      The following examples illustrate common usage of the anyvpn utility.
+
+     To add a new password to the "VPN" keychain service and then use anyvpn
+     to connect to the VPN using that password from the keychain:
+
+	   security add-generic-password -a ${USER} -s VPN -w '<password>'
+	   anyvpn -k keychain on
 
      To connect to the VPN using the password stored under the "Yahoo" login
      entry in your LastPass password manager for the "jschauma@yahoo.com"
@@ -147,9 +154,14 @@ ENVIRONMENT
      DOMAIN		  The domain to use when constructing your LAST-
 			  PASS_LOGIN or ONEPASS_LOGIN ID.
 
-			  If unset, anyvpn will try to identify a suitable
-			  domain by looking at /etc/resolv.conf or the output
-			  of the hostname(1) command.
+			  If unset, then anyvpn will try to identify a suit-
+			  able domain by looking at /etc/resolv.conf or the
+			  output of the hostname(1) command.
+
+     KEYCHAIN_VPN_ENTRY	  The name of the keychain entry ("service") for your
+			  VPN login.
+
+			  If unset, then anyvpn will use "VPN".
 
      LASTPASS_LOGIN	  The full LastPass user ID.  This may be e.g.,
 			  "first.lass@company.tld", "${USER}@company.name"
@@ -217,7 +229,7 @@ ENVIRONMENT
 			  If unset, then anyvpn will use "${USER}".
 
 SEE ALSO
-     lpass(1), op(1)
+     lpass(1), op(1), security(1)
 
 HISTORY
      This script was originally written by Jan Schaumann
