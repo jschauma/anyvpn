@@ -6,7 +6,7 @@ This tool can help you make this less painful and
 hopefully encourage users to use a password manager.
 
 At this time, this script supports the use of the
-macOS keychain, LastPass and 1Password.  For use with
+macOS keychain, LastPass, and 1Password.  For use with
 LastPass, you need to install the `lpass` command-line
 utility (available from e.g.,
 [here](https://github.com/lastpass/lastpass-cli)); for
