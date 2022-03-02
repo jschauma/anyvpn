@@ -7,7 +7,7 @@
 set -eu
 
 PROGNAME="${0##*/}"
-VERSION="1.0"
+VERSION="1.2"
 VERBOSITY=0
 
 # These will be determined below in setVariables()
@@ -25,6 +25,7 @@ _FORCE_LOGOUT=0
 _2FA="push"
 _ANYCONNECT_PREFIX="${ANYCONNECT_PREFIX:-"/opt/cisco/anyconnect"}"
 _ANYCONNECT="${_ANYCONNECT_PREFIX}/bin/vpn"
+_KC="$(which security || true)"
 _LPASS="$(which lpass || true)"
 _OPASS="$(which op || true)"
 _OPASS_SIGNIN_ADDRESS="${ONEPASS_ADDRESS:-"my.1password.com"}"
@@ -32,6 +33,7 @@ _PASSWORD_MANAGER="lastpass"
 _VPN_PW=""
 
 _PM_VPN="${PM_VPN_ENTRY:-"VPN"}"
+_KC_VPN="${KEYCHAIN_VPN_ENTRY:="${_PM_VPN}"}"
 _LP_VPN="${LASTPASS_VPN_ENTRY:-"${_PM_VPN}"}"
 _OP_VPN="${ONEPASS_VPN_ENTRY:-"${_PM_VPN}"}"
 
@@ -78,6 +80,11 @@ checkEnv() {
 			echo "Unable to find the 'op(1)' in your PATH." >&2
 			echo "Please install the 1Password command-line client from" >&2
 			echo "https://support.1password.com/command-line-getting-started/" >&2
+			exit ${_FAIL}
+		fi
+	elif [ x"${_PASSWORD_MANAGER}" = x"keychain" ]; then
+		if [ -z "${_KC}" ]; then
+			echo "Unable to find 'security(1)' in your PATH." >&2
 			exit ${_FAIL}
 		fi
 	else
@@ -131,10 +138,26 @@ ${_2FA}
 EOF
 }
 
+getPasswordFromKeychain() {
+	verbose "Trying to get your VPN password from the keychain..." 2
+
+	_VPN_PW="$(${_KC} find-generic-password -a ${USER} -s ${_KC_VPN} -w || true)"
+	if [ -z "${_VPN_PW}" ]; then
+		echo "Unable to retrieve password from keychain service '${_KC_VPN}'." >&2
+		exit ${_FAIL}
+		# NOTREACHED
+	fi
+}
+
 getPasswordFromLastPass() {
 	verbose "Trying to get your VPN password from LastPass..." 2
 
-	if ! ${_LPASS} status -q; then
+	# 'lpass status' may sometimes report being
+	# "Logged in as (null)", and 'lpass status -q'
+	# would return successfully, so we can't rely
+	# on that and instead have to check for an
+	# email address.
+	if ! ${_LPASS} status | grep -q -i 'Logged in as .*@'; then
 		verbose "Trying to log into LastPass..." 3
 		${_LPASS} login "${_LP_LOGIN}"
 	fi
@@ -192,6 +215,9 @@ getPasswordFromOnePass() {
 
 getPasswordFromPasswordManager() {
 	case "${_PASSWORD_MANAGER}" in
+		keychain)
+			getPasswordFromKeychain
+		;;
 		lastpass)
 			getPasswordFromLastPass
 		;;

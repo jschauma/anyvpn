@@ -1,3 +1,9 @@
+Version 1.2 (2022-03-02)
+ * add support for macOS keychain via security(1)
+
+Version 1.1 (2022-01-28)
+ * handle rare lpass status failure
+
 Version 1.0 (2022-01-20)
  * actually make '-f' do what we think was intended
 

@@ -1,4 +1,4 @@
-.Dd January 20, 2022
+.Dd March 02, 2022
 .Dt anyvpn 1
 .Os
 .Sh NAME
@@ -34,7 +34,7 @@ Valid options are 'push' or a Duo 2FA code.
 Defaults to 'push'.
 .It Fl p Ar app
 Use this password manager app.
-Currently supported: lastpass, onepass.
+Currently supported: keychain, lastpass, onepass.
 If not specified,
 .Nm
 will use 'lastpass'.
@@ -65,7 +65,8 @@ connect to the VPN without having to unlock your
 password manager and copy and paste your password.
 .Sh PASSWORD MANAGER CONSIDERATIONS
 In order to retrieve your password from your password
-manager,
+manager, and unless you are using the macOS keychain
+.Ns ( Fl p Ar keychain Ns ),
 .Nm
 needs to begin a session with the password manager or
 reuse an existing one.
@@ -131,6 +132,16 @@ The following examples illustrate common usage of the
 .Nm
 utility.
 .Pp
+To add a new password to the "VPN" keychain service
+and then use
+.Nm
+to connect to the VPN using that password from the
+keychain:
+.Bd -literal -offset indent
+security add-generic-password -a ${USER} -s VPN -w '<password>'
+anyvpn -k keychain on
+.Ed
+.Pp
 To connect to the VPN using the password stored under
 the "Yahoo" login entry in your LastPass password
 manager for the "jschauma@yahoo.com" account:
@@ -170,12 +181,19 @@ Defaults to "/opt/cisco/anyconnect".
 The domain to use when constructing your
 LASTPASS_LOGIN or ONEPASS_LOGIN ID.
 .Pp
-If unset,
+If unset, then
 .Nm
 will try to identify a suitable domain by looking at
 /etc/resolv.conf or the output of the
 .Xr hostname 1
 command.
+.It Ev KEYCHAIN_VPN_ENTRY
+The name of the keychain entry ("service") for your
+VPN login.
+.Pp
+If unset, then
+.Nm
+will use "VPN".
 .It Ev LASTPASS_LOGIN
 The full LastPass user ID.
 This may be e.g., "first.lass@company.tld",
@@ -272,7 +290,8 @@ will use "${USER}".
 .El
 .Sh SEE ALSO
 .Xr lpass 1 ,
-.Xr op 1
+.Xr op 1 ,
+.Xr security 1
 .Sh HISTORY
 This script was originally written by
 .An Jan Schaumann
