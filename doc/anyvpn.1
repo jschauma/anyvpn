@@ -1,4 +1,4 @@
-.Dd March 02, 2022
+.Dd March 08, 2022
 .Dt anyvpn 1
 .Os
 .Sh NAME
@@ -10,6 +10,7 @@
 .Op Fl m Ar method
 .Op Fl p Ar app
 .Op Fl s Ar site
+.Op Fl u Ar user
 .Ar on|off|sites
 .Sh DESCRIPTION
 .Nm
@@ -43,6 +44,15 @@ Connect to this site.
 Defaults to the value of the VPN_SITE environment
 variable or, if that is unset, the first site
 condigured in AnyConnect.
+.It Fl u Ar user
+Set the username to use when connecting to the VPN.
+This is similar to but overrides setting the value via
+the
+.Ev VPN_USER
+environment variable.
+(This option exists to allow the user to use a
+different username ad-hoc, but set a default different
+from the local username for common usage.)
 .It Fl v
 Be verbose.
 Can be specified multiple times.
@@ -226,7 +236,7 @@ See https://is.gd/BR670l for details.
 .It Ev ONEPASS_LOGIN
 The 1Password user ID.
 This may be e.g., "first.lass@company.tld",
-"${USER}@company.name} etc.
+"${USER}@company.name" etc.
 .Pp
 If unset, then
 .Nm
@@ -287,6 +297,10 @@ login name.
 If unset, then
 .Nm
 will use "${USER}".
+.Pp
+Note: specifying the user via the
+.Fl u
+flag overrides this value.
 .El
 .Sh SEE ALSO
 .Xr lpass 1 ,

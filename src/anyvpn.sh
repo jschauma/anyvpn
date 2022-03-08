@@ -7,7 +7,7 @@
 set -eu
 
 PROGNAME="${0##*/}"
-VERSION="1.2"
+VERSION="1.3"
 VERBOSITY=0
 
 # These will be determined below in setVariables()
@@ -287,13 +287,14 @@ setVariables() {
 
 usage() {
 	cat <<EOH
-Usage: ${PROGNAME} [-Vhlv] [-m method] [-p app] [-s site] on|off|sites
+Usage: ${PROGNAME} [-Vhlv] [-m method] [-p app] [-s site] [-u user] on|off|sites
 	-V         print version number and exit
 	-h         print this help and exit
 	-l         log out of the password manager after fetching the password
 	-m method  use this 2FA method (default: push)
-	-p app     use this password manager (lastpass, onepass; default: lastpass)
+	-p app     use this password manager (keychain, lastpass, onepass; default: lastpass)
 	-s site    connect to this site (default: ${_VPN_SITE})
+	-u user    use this username to connect to the VPN (default: ${_VPN_USER})
 	-v         be verbose
 EOH
 }
@@ -333,7 +334,7 @@ vpnOn() {
 
 setVariables
 
-while getopts 'Vhlm:p:s:v' opt; do
+while getopts 'Vhlm:p:s:u:v' opt; do
 	case ${opt} in
 		V)
 			echo "${PROGNAME} Version ${VERSION}"
@@ -356,6 +357,9 @@ while getopts 'Vhlm:p:s:v' opt; do
 		;;
 		s)
 			_VPN_SITE="${OPTARG}"
+		;;
+		u)
+			_VPN_USER="${OPTARG}"
 		;;
 		v)
 			VERBOSITY=$(( ${VERBOSITY} + 1 ))
