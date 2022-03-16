@@ -1,4 +1,4 @@
-.Dd March 08, 2022
+.Dd March 16, 2022
 .Dt anyvpn 1
 .Os
 .Sh NAME
@@ -11,7 +11,7 @@
 .Op Fl p Ar app
 .Op Fl s Ar site
 .Op Fl u Ar user
-.Ar on|off|sites
+.Ar on|off|sites|vars
 .Sh DESCRIPTION
 .Nm
 is a simple script that allows you to connect to a
@@ -24,11 +24,11 @@ The following options are supported by
 .Bl -tag -width m_method_
 .It Fl V
 Print the current version information and exit.
+.It Fl h
+Display help and exit.
 .It Fl l
 Log out of the password manager after fetching the
 password.
-.It Fl h
-Display help and exit.
 .It Fl m Ar method
 Use this 2FA method.
 Valid options are 'push' or a Duo 2FA code.
@@ -56,6 +56,22 @@ from the local username for common usage.)
 .It Fl v
 Be verbose.
 Can be specified multiple times.
+.El
+.Sh COMMANDS
+.Pp
+The following commands are supported by
+.Nm :
+.Bl -tag -width sites_
+.It on
+Connect to the given VPN site.
+.It off
+Disconnect from the VPN.
+.It sites
+List the available VPN sites you can connect to.
+.It vars
+Print out the value of all relevant environment
+variables used by
+.Nm .
 .El
 .Pp
 Any other arguments are passed through to the
@@ -270,6 +286,13 @@ login.
 If unset, then
 .Nm
 will use "VPN".
+.Pp
+Note: this value is overriden by either of the
+.Ev KEYCHAIN_VPN_ENTRY ,
+.Ev LASTPASS_VPN_ENTRY ,
+or
+.Ev ONEPASS_VPN_ENTRY
+environment variables.
 .It Ev USER
 The local username, as commonly set on most unix
 systems.

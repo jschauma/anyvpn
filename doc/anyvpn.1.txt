@@ -4,7 +4,7 @@ NAME
      anyvpn - connect to a Cisco AnyConnect VPN
 
 SYNOPSIS
-     anyvpn [-Vhlv] [-m method] [-p app] [-s site] [-u user] on|off|sites
+     anyvpn [-Vhlv] [-m method] [-p app] [-s site] [-u user] on|off|sites|vars
 
 DESCRIPTION
      anyvpn is a simple script that allows you to connect to a Cisco AnyConnect
@@ -16,9 +16,9 @@ OPTIONS
 
      -V		Print the current version information and exit.
 
-     -l		Log out of the password manager after fetching the password.
-
      -h		Display help and exit.
+
+     -l		Log out of the password manager after fetching the password.
 
      -m method	Use this 2FA method.  Valid options are 'push' or a Duo 2FA
 		code.  Defaults to 'push'.
@@ -38,6 +38,18 @@ OPTIONS
 		from the local username for common usage.)
 
      -v		Be verbose.  Can be specified multiple times.
+
+COMMANDS
+     The following commands are supported by anyvpn:
+
+     on	     Connect to the given VPN site.
+
+     off     Disconnect from the VPN.
+
+     sites   List the available VPN sites you can connect to.
+
+     vars    Print out the value of all relevant environment variables used by
+	     anyvpn.
 
      Any other arguments are passed through to the AnyConnect VPN command.
 
@@ -178,6 +190,10 @@ ENVIRONMENT
      PM_VPN_ENTRY	  The name of the password manager entry for your VPN
 			  login.  If unset, then anyvpn will use "VPN".
 
+			  Note: this value is overriden by either of the
+			  KEYCHAIN_VPN_ENTRY, LASTPASS_VPN_ENTRY, or
+			  ONEPASS_VPN_ENTRY environment variables.
+
      USER		  The local username, as commonly set on most unix
 			  systems.  This variable is not used directly, but some
 			  of the other variables described here may derive their
@@ -211,4 +227,4 @@ BUGS
      Please file bugs and feature requests via GitHub pull requests and issues
      or by emailing the author.
 
-NetBSD 8.0			  March 8, 2022			      NetBSD 8.0
+NetBSD 8.0			 March 16, 2022			      NetBSD 8.0

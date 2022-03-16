@@ -7,11 +7,12 @@
 set -eu
 
 PROGNAME="${0##*/}"
-VERSION="1.3"
+VERSION="1.4"
 VERBOSITY=0
 
 # These will be determined below in setVariables()
 _DOMAIN=""
+_DOMAIN_SRC="default         "
 
 _LP_LOGIN=""
 _OP_LOGIN=""
@@ -20,6 +21,7 @@ _VPN_SITE=""
 _VPN_USER=""
 
 _FAIL=255
+_FLAGS=""
 _FORCE_LOGOUT=0
 
 _2FA="push"
@@ -138,6 +140,96 @@ ${_2FA}
 EOF
 }
 
+dumpVars() {
+	verbose "Dumping the values of all relevant variables we use..."
+
+	local ac="default             "
+	if [ -n "${ANYCONNECT_PREFIX:-""}" ]; then
+		ac="\${ANYCONNECT_PREFIX}"
+	fi
+
+	local pm="${_LPASS}"
+	local pmentry="default              "
+	if [ -n "${PM_VPN_ENTRY:-""}" ]; then
+		pmentry="\${PM_VPN_ENTRY}      "
+	fi
+	local pmval="${_PM_VPN}"
+	local pmlogin="\${user}@\${domain}"
+	local pmloginval
+	case "${_PASSWORD_MANAGER}" in
+		"lastpass")
+			pm="${_LPASS}"
+			pmloginval="${_LP_LOGIN}"
+			if [ -n "${LASTPASS_VPN_ENTRY:-""}" ]; then
+				pmentry="\${LASTPASS_VPN_ENTRY}"
+				pmval="${_LP_VPN}"
+			fi
+			if [ -n "${LASTPASS_LOGIN:=""}" ]; then
+				pmlogin="\${LASTPASS_LOGIN}"
+			fi
+		;;
+		"onepass")
+			pm="${_OPASS}"
+			pmloginval="${_OP_LOGIN}"
+			if [ -n "${ONEPASS_VPN_ENTRY:-""}" ]; then
+				pmentry="\${ONEPASS_VPN_ENTRY} "
+				pmval="${_OP_VPN}"
+			fi
+			if [ -n "${ONEPASS_LOGIN:=""}" ]; then
+				pmlogin="\${ONEPASS_LOGIN} "
+			fi
+		;;
+		"keychain")
+			pm="${_KC}"
+			pmlogin="N/A"
+			pmloginval="N/A"
+			if [ -n "${KEYCHAIN_VPN_ENTRY:-""}" ]; then
+				pmentry="\${KEYCHAIN_VPN_ENTRY}"
+				pmval="${_KC_VPN}"
+			fi
+		;;
+	esac
+	local pmo="default"
+	if expr "${_FLAGS}" : ".* p" >/dev/null; then
+		pmo="-p     "
+	fi
+
+	local vpnu="\${USER}    "
+	if [ -n "${VPN_USER:-""}" ]; then
+		vpnu="\${VPN_USER}"
+	fi
+	if expr "${_FLAGS}" : ".* u" >/dev/null; then
+		vpnu="-u         "
+	fi
+
+	local vpns="default    "
+	if [ -n "${VPN_SITE:-""}" ]; then
+		vpns="\${VPN_SITE}"
+	fi
+	if expr "${_FLAGS}" : ".* s" >/dev/null; then
+		vpns="-s         "
+	fi
+
+	local mfo="default"
+	if expr "${_FLAGS}" : ".* m" >/dev/null; then
+		mfo="-m     "
+	fi
+
+	cat <<EOF
+Setting                      Derived from            Value used
+-----------------------------------------------------------------------------
+AnyConnect Path              ${ac}    "${_ANYCONNECT_PREFIX}"
+Domain                       ${_DOMAIN_SRC}        "${_DOMAIN}"
+MFA Option                   ${mfo}                 "${_2FA}"
+Password Manager             ${pmo}                 "${_PASSWORD_MANAGER}"
+Password Manager Executable                          "${pm}"
+Password Manager Entry       ${pmentry}   "${pmval}"
+Password Manager Login       ${pmlogin}       "${pmloginval}
+VPN User                     ${vpnu}             "${_VPN_USER}"
+VPN Site                     ${vpns}             "${_VPN_SITE}"
+EOF
+}
+
 getPasswordFromKeychain() {
 	verbose "Trying to get your VPN password from the keychain..." 2
 
@@ -251,18 +343,20 @@ logoutPass() {
 }
 
 setVariables() {
-	local domain
 	local user
 
-	if [ -n "${_DOMAIN:-""}" ]; then
-		domain="${_DOMAIN}"
-	elif [ -n "${DOMAIN:-""}" ]; then
-		domain="${DOMAIN}"
-	elif [ -f "/etc/resolv.conf" ]; then
-		domain="$(sed -n -E 's/^(search|domain) ([^ ]+).*/\2/p' /etc/resolv.conf)"
+	if [ -n "${DOMAIN:-""}" ]; then
+		_DOMAIN="${DOMAIN}"
+		_DOMAIN_SRC="\${DOMAIN}     "
+	elif [ -z "${_DOMAIN:-""}" ]; then
+		if [ -f "/etc/resolv.conf" ]; then
+			_DOMAIN="$(sed -n -E 's/^(search|domain) ([^ ]+).*/\2/p' /etc/resolv.conf)"
+			_DOMAIN_SRC="/etc/resolv.conf"
 	else
 		# 'hostname -f' is not portable
-		domain="$(hostname)"
+			_DOMAIN="$(hostname)"
+			_DOMAIN_SRC="hostname(1)     "
+		fi
 	fi
 
 	if [ -n "${USER:-""}" ]; then
@@ -271,8 +365,8 @@ setVariables() {
 		user="$(id -un)"
 	fi
 
-	_LP_LOGIN="${LASTPASS_LOGIN:-"${user}@${domain}"}"
-	_OP_LOGIN="${ONEPASS_LOGIN:-"${user}@${domain}"}"
+	_LP_LOGIN="${LASTPASS_LOGIN:-"${user}@${_DOMAIN}"}"
+	_OP_LOGIN="${ONEPASS_LOGIN:-"${user}@${_DOMAIN}"}"
 
 	_VPN_USER="${VPN_USER:-"${user}"}"
 
@@ -287,7 +381,7 @@ setVariables() {
 
 usage() {
 	cat <<EOH
-Usage: ${PROGNAME} [-Vhlv] [-m method] [-p app] [-s site] [-u user] on|off|sites
+Usage: ${PROGNAME} [-Vhlv] [-m method] [-p app] [-s site] [-u user] on|off|sites|vars
 	-V         print version number and exit
 	-h         print this help and exit
 	-l         log out of the password manager after fetching the password
@@ -335,6 +429,7 @@ vpnOn() {
 setVariables
 
 while getopts 'Vhlm:p:s:u:v' opt; do
+	_FLAGS="${_FLAGS} ${opt}"
 	case ${opt} in
 		V)
 			echo "${PROGNAME} Version ${VERSION}"
@@ -390,6 +485,9 @@ case "${1}" in
 	;;
 	sites)
 		listSites
+	;;
+	vars)
+		dumpVars
 	;;
 	*)
 		${_ANYCONNECT} "$@"
